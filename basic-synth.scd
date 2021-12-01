@@ -1,4 +1,4 @@
-s.boot;
+/*s.boot;
 MIDIClient.init(1, 1); // 1 input 1 output
 MIDIIn.connectAll;
 // MIDIClient.disposeClient; // cleans up MIDIClient
@@ -56,7 +56,7 @@ var notes = Array.newClear(128);
 onNote = MIDIFunc.noteOn({ |src, chan, num, veloc|
 	notes[num] = Synth("noteOn", [\freq, num.midicps,
         \amp, veloc * 0.00315]);
-});
+});*/
 
 /*var tempo = TempoClock.value(1); // init value = 60 BPM
 tempo.value;
@@ -87,11 +87,36 @@ Nice to have modules in synth:
 - [] reverb effect
 - [] stutter effect
 */
+(
+var awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton;
 
 awindow = FlowView.new(windowTitle:"A Modular Synthesizer");
 volumeSlider = EZSlider(awindow, label:"Volume",controlSpec:[0,100], action:{|mv| x.set("vol",mv.value)}, initVal:50);
 pitchKnob = EZKnob(awindow, label:"Pitch",controlSpec:\freq, action:{|noteOn| x.set("freq",noteOn.value)}, initVal:440);
-bpmSlider = EZPopUpMenu(awindow, label:"BPM", controlSpec:[0.4, 4.16666667], action:{|mbpm| x.set("bpm", bpm.value)}, initVal:0.4); // 24-250 range of BPM OR 0.4, 4,16666667 BPS/HZ
+bpmDropDown = PopUpMenu(awindow, Rect(10, 10, 170, 20));
+bpmDropDown.items = [
+	"Select a Genre", "Cha Cha", "Charleston", "Electro", "Foxtrot", "Hip-Hop", "House", "Jazz/Funk", "Jive", "Metal", "Paso Doble", "Pop", "Quickstep", "Reggae", "Rock", "Rumba", "R&B", "Salsa", "Samba", "Tango", "Techno", "Waltz"
+];
+
+
+
+/*bpmSlider = EZPopUpMenu(awindow, label:"BPM", controlSpec:[0.4, 4.16666667], action:{|mbpm| x.set("bpm", bpm.value)}, initVal:0.4); // 24-250 range of BPM OR 0.4, 4,16666667 BPS/HZ*/
+legatoButton = Button(awindow, Rect(20, 20, 50, 25)).states_([["Off", Color.black, Color.gray],
+	["On", Color.black, Color.green]]).action_({arg vbutton;
+	if(vbutton.value==1,
+		{(
+			// make sure MIDI note is sustained until turned off
+		)}
+	);
+});
+
+applyButton = Button(awindow, Rect(20, 20, 50, 25)).states_([["Apply", Color.black, Color.clear]]).action_({arg vbutton;
+	if(vbutton.value==1,
+		{(
+			// apply changes from BPM drop down
+		)}
+	);
+});
 
 statusButton = Button(awindow, Rect(20,20, 50, 25))
   .states_([["Off", Color.black, Color.grey],
@@ -102,7 +127,7 @@ statusButton = Button(awindow, Rect(20,20, 50, 25))
 		x=SynthDef("sinewave");
         volumeSlider.value = 50;
         pitchKnob.value = 440;
-		bpmSlider.value = 0.4;
+		/*bpmSlider.value = 0.4;*/
          )}
      ,
     {x.free});
@@ -112,6 +137,6 @@ statusButton.value=0;
 // quitNotes = { onNote.free; offNote.free; }
 // when done
 )
-
-MIDIdef.freeAll;
-s.quit();
+//
+// MIDIdef.freeAll;
+// s.quit();
