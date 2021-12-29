@@ -1,5 +1,4 @@
-/*s.boot;
-MIDIClient.init(1, 1); // 1 input 1 output
+/*MIDIClient.init(1, 1); // 1 input 1 output
 MIDIIn.connectAll;
 // MIDIClient.disposeClient; // cleans up MIDIClient
 
@@ -45,28 +44,10 @@ onNote = MIDIFunc.noteOn({ |src, chan, num, veloc|
 offNote = MIDIFunc.noteOff({ |src, chan, num, veloc|
     notes[num].release;
 });
-)
-
-
-(
-var awindow, volumeSlider, pitchKnob, statusButton, bpmSlider, bpm, legatoButton, onNote;
-var notes = Array.newClear(128);
-
-
-onNote = MIDIFunc.noteOn({ |src, chan, num, veloc|
-	notes[num] = Synth("noteOn", [\freq, num.midicps,
-        \amp, veloc * 0.00315]);
-});*/
-
-/*var tempo = TempoClock.value(1); // init value = 60 BPM
-tempo.value;
-tempo.tempo_.value;*/
+)*/
 
 // BPM for different types of music: https://www.gemtracks.com/guides/view.php?title=music-genres-and-their-typical-bpms&id=823
 // need to cite this site in the paper
-// 24 BPM: Largissimo
-// 162-200 BPM: Presto
-// 201+: Prestissimo
 
 /*
 Must have modules in synth:
@@ -77,7 +58,6 @@ Must have modules in synth:
 - [] arpeggiator
 - [] delay effect
 */
-
 /*
 Nice to have modules in synth:
 - [] aftertouch
@@ -87,22 +67,57 @@ Nice to have modules in synth:
 - [] reverb effect
 - [] stutter effect
 */
+
 (
-var awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton;
+/*s.boot;
+MIDIClient.init(1, 1); // 1 input 1 output
+MIDIIn.connectAll;*/
+var allNotes = Array.newClear(128);
+var onNote;
+var awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton, arpeggiator, bpmViewer, bpmDictionaryValues, currentBpmValue;
+
+
+onNote = MIDIFunc.noteOn({ |src, chan, num, veloc|
+	allNotes[num] = Synth("noteOn", [\freq, num.midicps,
+        \amp, veloc * 0.00315]);
+});
 
 awindow = FlowView.new(windowTitle:"A Modular Synthesizer");
 volumeSlider = EZSlider(awindow, label:"Volume",controlSpec:[0,100], action:{|mv| x.set("vol",mv.value)}, initVal:50);
-pitchKnob = EZKnob(awindow, label:"Pitch",controlSpec:\freq, action:{|noteOn| x.set("freq",noteOn.value)}, initVal:440);
-bpmDropDown = PopUpMenu(awindow, Rect(10, 10, 170, 20));
-bpmDropDown.items = [
-	"Select a Genre", "Cha Cha", "Charleston", "Electro", "Foxtrot", "Hip-Hop", "House", "Jazz/Funk", "Jive", "Metal", "Paso Doble", "Pop", "Quickstep", "Reggae", "Rock", "Rumba", "R&B", "Salsa", "Samba", "Tango", "Techno", "Waltz"
-];
+pitchKnob = EZKnob(awindow, label:"Pitch",controlSpec:\freq, action:{|mn| x.set("freq",mn.value)}, initVal:440);
+bpmDropDown = PopUpMenu(awindow, Rect(20, 20, 120, 20));
 
+bpmDropDown.items = [
+	"Select a Genre", "Cha Cha", "Charleston", "Foxtrot", "Hip-Hop", "House", "Jazz/Funk", "Jive", "Metal", "Paso Doble", "Pop", "Quickstep", "Rock", "Rumba", "R&B", "Salsa", "Samba", "Tango", "Waltz", "Viennese Waltz"
+];
+bpmViewer = TextView.new(awindow, Rect(45, 70, 100, 20));
+
+bpmDictionaryValues = Dictionary.new(20);
+bpmDictionaryValues.put(0, 0);
+bpmDictionaryValues.put(1, 128);
+bpmDictionaryValues.put(2, 290);
+bpmDictionaryValues.put(3, 120);
+bpmDictionaryValues.put(4, 115);
+bpmDictionaryValues.put(5, 135);
+bpmDictionaryValues.put(6, 125);
+bpmDictionaryValues.put(7, 184);
+bpmDictionaryValues.put(8, 160);
+bpmDictionaryValues.put(9, 124);
+bpmDictionaryValues.put(10, 130);
+bpmDictionaryValues.put(11, 208);
+bpmDictionaryValues.put(12, 140);
+bpmDictionaryValues.put(13, 108);
+bpmDictionaryValues.put(14, 80);
+bpmDictionaryValues.put(15, 300);
+bpmDictionaryValues.put(16, 105);
+bpmDictionaryValues.put(17, 66);
+bpmDictionaryValues.put(18, 90);
+bpmDictionaryValues.put(19, 180);
 
 
 /*bpmSlider = EZPopUpMenu(awindow, label:"BPM", controlSpec:[0.4, 4.16666667], action:{|mbpm| x.set("bpm", bpm.value)}, initVal:0.4); // 24-250 range of BPM OR 0.4, 4,16666667 BPS/HZ*/
-legatoButton = Button(awindow, Rect(20, 20, 50, 25)).states_([["Off", Color.black, Color.gray],
-	["On", Color.black, Color.green]]).action_({arg vbutton;
+legatoButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Sustain Off", Color.black, Color.gray],
+	["Sustain On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1,
 		{(
 			// make sure MIDI note is sustained until turned off
@@ -110,12 +125,11 @@ legatoButton = Button(awindow, Rect(20, 20, 50, 25)).states_([["Off", Color.blac
 	);
 });
 
-applyButton = Button(awindow, Rect(20, 20, 50, 25)).states_([["Apply", Color.black, Color.clear]]).action_({arg vbutton;
-	if(vbutton.value==1,
-		{(
-			// apply changes from BPM drop down
-		)}
-	);
+applyButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Update BPM", Color.black, Color.clear]]).action_({arg vbutton;
+	// apply changes from BPM drop down
+	currentBpmValue = bpmDropDown.value;
+	currentBpmValue = bpmDictionaryValues.at(currentBpmValue);
+	bpmViewer.string = currentBpmValue;
 });
 
 statusButton = Button(awindow, Rect(20,20, 50, 25))
@@ -134,6 +148,7 @@ statusButton = Button(awindow, Rect(20,20, 50, 25))
     });
 
 statusButton.value=0;
+// applyButton.value=0;
 // quitNotes = { onNote.free; offNote.free; }
 // when done
 )
