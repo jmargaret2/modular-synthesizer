@@ -17,33 +17,24 @@ Nice to have modules in synth:
 - [] stutter effect
 */
 (
-var snd, functions, b, waveformMenu, awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton, arpeggiator, bpmViewer, bpmDictionaryValues, currentBpmValue;
-var w = Window.new.front;
-waveformMenu = PopUpMenu(w, Rect(10, 10, 90, 20)).items_([
+var waveformState, functions, waveformMenu, awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton, arpeggiator, bpmViewer, bpmDictionaryValues, currentBpmValue;
+
+awindow = FlowView.new(windowTitle:"A Modular Synthesizer");
+
+waveformMenu = PopUpMenu(awindow, Rect(10, 10, 130, 20));
+waveformMenu.items = [
 	"Sine wave", "Square wave", "Sawtooth wave", "Triangle wave", "Pulse wave"
-]);
+];
 
 functions = [
-	{ SinOsc.ar(440, 0) },
+	{ SinOsc.ar(440, 0) }, // sine wave
 	{ Pulse.ar(440, 0.5) }, // square wave
-	{ Saw.ar(440) },
+	{ Saw.ar(440) }, // sawtooth wave
 	{ LFTri.ar(freq: 440.0) }, // triangle wave
 	// TODO: find way to not hardcode pulse
 	{ Pulse.ar(440, 0.1) } // pulse wave, typically cycles between 0 and 1, right now this is hardcoded
 ];
 
-b = Button(w, Rect(110, 10, 180, 20)).states_([["Play off", Color.black, Color.grey],
-    ["Play On",Color.black,Color.yellow]]).action_({ arg vbutton;
-	if(vbutton.value==1,
-		{(
-			snd = functions.at(waveformMenu.value).play;
-		)}
-	)
-});
-
-w.front;
-
-awindow = FlowView.new(windowTitle:"A Modular Synthesizer");
 volumeSlider = EZSlider(awindow, label:"Volume", controlSpec:[0,100], action:{|mv| x.set("vol", mv.value)}, initVal:50);
 pitchKnob = EZKnob(awindow, label:"Pitch", controlSpec:\freq, action:{|mn| x.set("freq", mn.value)}, initVal:440);
 bpmDropDown = PopUpMenu(awindow, Rect(20, 20, 120, 20));
@@ -97,12 +88,12 @@ statusButton = Button(awindow, Rect(20,20, 50, 25))
 .action_({ arg vbutton;
 	if(vbutton.value==1,
 		{(
-			x=Synth("sinewave");
+			waveformState = functions.at(waveformMenu.value).play;
 			volumeSlider.value = 50;
 			pitchKnob.value = 440;
 			/*bpmSlider.value = 0.4;*/
 		)},
-		{x.free});
+		{waveformState.release;});
 });
 
 statusButton.value = 0;
