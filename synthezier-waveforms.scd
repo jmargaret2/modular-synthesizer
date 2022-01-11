@@ -4,7 +4,7 @@ Must have modules in synth:
 - [x] volume control
 - [] bpm slider BPM here is meausred BPS
 - [] legato switch - sustain button
-- [] arpeggiator
+- [x] arpeggiator
 - [] delay effect
 */
 /*
@@ -17,9 +17,11 @@ Nice to have modules in synth:
 - [] stutter effect
 */
 (
-var waveformMenu, awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton, arpeggiator, arpeggio, bpmViewer, currentBpmValue, baseFreq, bpmDictionaryValues;
+var waveformMenu, awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton, arpeggiator, arpeggio, bpmViewer, currentBpmValue, bpmDictionaryValues, thirdFreq, fifthFreq;
 
-awindow = FlowView.new(windowTitle:"A Modular Synthesizer");
+var baseFrequency = 440; // A4
+
+awindow = FlowView.new(windowTitle:"A Modular Synthesizer with Waveforms");
 
 waveformMenu = PopUpMenu(awindow, Rect(10, 10, 130, 20));
 waveformMenu.items = [
@@ -27,11 +29,11 @@ waveformMenu.items = [
 ];
 
 switch(waveformMenu.value,
-	0, {SynthDef("sinewave", {arg freq=261.63, vol=50; Out.ar(0, SinOsc.ar(freq, 0, vol))}).add;}, // sine wave
-	1, {SynthDef("squarewave", {arg freq=261.63, vol=50; Out.ar(0, Pulse.ar(freq, 0, vol))}).add;}, // square wave
-	2, {SynthDef("sawtoothwave", {arg freq=261.63, vol=50; Out.ar(0, Saw.ar(freq, 0, vol))}).add;}, // sawtooth wave
-	3, {SynthDef("trianglewave", {arg freq=261.63, vol=50; Out.ar(0, LFTri.ar(freq, 0, vol))}).add;}, // triangle wave
-	4, {SynthDef("pulsewave", {arg freq=261.63, vol=50; Out.ar(0, Pulse.ar(freq, 0.1, vol))}).add;} // pulse wave
+	0, {SynthDef("sinewave", {arg freq=440, vol=50; Out.ar(0, SinOsc.ar(freq, 0, vol))}).add;}, // sine wave
+	1, {SynthDef("squarewave", {arg freq=440, vol=50; Out.ar(0, Pulse.ar(freq, 0, vol))}).add;}, // square wave
+	2, {SynthDef("sawtoothwave", {arg freq=440, vol=50; Out.ar(0, Saw.ar(freq, 0, vol))}).add;}, // sawtooth wave
+	3, {SynthDef("trianglewave", {arg freq=440, vol=50; Out.ar(0, LFTri.ar(freq, 0, vol))}).add;}, // triangle wave
+	4, {SynthDef("pulsewave", {arg freq=440, vol=50; Out.ar(0, Pulse.ar(freq, 0.1, vol))}).add;} // pulse wave
 );
 
 /*waveformButton = Button(awindow, Rect(20,20, 130, 25))
@@ -54,11 +56,12 @@ waveformMenu.item.postln;
 volumeSlider = EZSlider(awindow, label:"Volume", controlSpec:[0,100], action:{|mv| x.set("vol", mv.value)}, initVal:50);
 pitchKnob = EZKnob(awindow, label:"Pitch", controlSpec:\freq, action:{|mn| x.set("freq", mn.value)}, initVal:440);
 
-/*baseFreq = pitchKnob.value;
-third_freq=(baseFreq * 5) / 4 to get third interval
-fifth_freq=(baseFreq * 3) / 2 to get fifth interval
-Post << baseFreq << " current note pitch" << Char.nl;
-*/
+thirdFreq = (baseFrequency * 5) / 4;
+Post << thirdFreq << " the third interval" << Char.nl;
+fifthFreq = baseFrequency * 1.5;
+Post << fifthFreq << " the fifth interval" << Char.nl;
+
+Post << baseFrequency << " current note pitch" << Char.nl;
 
 bpmDropDown = PopUpMenu(awindow, Rect(20, 20, 120, 20));
 
@@ -131,8 +134,8 @@ applyButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Update BPM", Col
 
 arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator Off", Color.black, Color.gray], ["Turn Arpeggiator On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1){(
-		SynthDef("sinewave_third", {arg third_freq = 329.63, vol=50; Out.ar(0, SinOsc.ar(third_freq, 0, vol))}).add;
-		SynthDef("sinewave_fifth", {arg fifth_freq = 392, vol=50; Out.ar(0, SinOsc.ar(fifth_freq, 0, vol))}).add;
+		SynthDef("sinewave_third", {arg vol=50; Out.ar(0, SinOsc.ar(thirdFreq, 0, vol))}).add;
+		SynthDef("sinewave_fifth", {arg vol=50; Out.ar(0, SinOsc.ar(fifthFreq, 0, vol))}).add;
 		y = Synth("sinewave_third");
 		z = Synth("sinewave_fifth");
 		arpeggio = ["sinewave", "sinewave_third", "sinewave_fifth"];
@@ -150,7 +153,7 @@ statusButton = Button(awindow, Rect(20,20, 50, 25))
 	if(vbutton.value==1,
 		{(
 			volumeSlider.value = 50;
-			pitchKnob.value = 261.63;
+			pitchKnob.value = 440;
 			switch(waveformMenu.value,
 				0, {x = Synth("sinewave")}, // sine wave
 				1, {x = Synth("squarewave")}, // square wave
