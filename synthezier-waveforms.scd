@@ -21,17 +21,21 @@ Nice to have modules in synth:
 var awindow;
 
 // Module variables
-var volumeSlider, pitchKnob, applyButton, arpeggiator, delayButton;
+var volumeSlider, pitchKnob, applyButton, arpeggiator, delaySlider;
 // var legatoButton
 
 // GUI variables
-var bpmViewer, statusButton, bpmDropDown;
+var bpmViewer, statusButton, bpmDropDown, resetButton;
 
 // Other variables
 var waveformMenu, bpmDictionaryValues, arpeggio, currentBpmValue;
+
+// const variables
 var baseFrequency = 440; // A4 -> synthesizer is based on the key of A Major, since that's standard tuning
 var thirdFreq = baseFrequency * (5/4);
 var fifthFreq = baseFrequency * (3/2);
+var piOverSix = pi/6;
+var negativePiOverSix = (-pi)/6;
 
 awindow = FlowView.new(windowTitle:"A Modular Synthesizer with Waveforms");
 
@@ -41,7 +45,7 @@ waveformMenu.items = [
 ];
 
 switch(waveformMenu.value,
-	0, {SynthDef("sinewave", {arg freq=440, vol=50; Out.ar(0, SinOsc.ar(freq, 0, vol))}).add;}, // sine wave
+	0, {SynthDef("sinewave", {arg freq=440, vol=50, phase=0; Out.ar(0, SinOsc.ar(freq, 0, vol))}).add;}, // sine wave
 	1, {SynthDef("squarewave", {arg freq=440, vol=50; Out.ar(0, Pulse.ar(freq, 0, vol))}).add;}, // square wave
 	2, {SynthDef("sawtoothwave", {arg freq=440, vol=50; Out.ar(0, Saw.ar(freq, 0, vol))}).add;}, // sawtooth wave
 	3, {SynthDef("trianglewave", {arg freq=440, vol=50; Out.ar(0, LFTri.ar(freq, 0, vol))}).add;}, // triangle wave
@@ -129,14 +133,7 @@ applyButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Update BPM", Col
 });
 
 // Does not apply to sinewave/waveform SynthDef, they are automatically sustained, and more effort would be needed to create the opposite module
-/*legatoButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Sustain Off", Color.black, Color.gray],
-	["Sustain On", Color.black, Color.yellow]]).action_({arg vbutton;
-	if(vbutton.value==1,
-		{(
-
-		)}
-	);
-});*/
+// legatoButton
 
 arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator Off", Color.black, Color.gray], ["Turn Arpeggiator On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1){(
@@ -150,6 +147,14 @@ arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator
 		y.free;
 		z.free;
 	}
+});
+
+delaySlider = EZSlider(awindow, label:"Delay Time", labelHeight:50, labelWidth:100, controlSpec:[(-pi)/6, pi/6], action:{|md| x.set("phase", md.value)}, initVal:0); // maxes out at negative pi/6 (on a unit circle, 11pi/6) through to pi/6
+
+resetButton = Button(awindow, Rect(20,20,100,25)).states_([["Reset Values",Color.black,Color.clear]]).action_({arg vbutton;
+	volumeSlider.value = 50;
+	pitchKnob.value = 440;
+	delaySlider.value = 0;
 });
 
 statusButton = Button(awindow, Rect(20,20, 50, 25))
@@ -167,10 +172,12 @@ statusButton = Button(awindow, Rect(20,20, 50, 25))
 				3, {x = Synth("trianglewave")}, // triangle wave
 				4, {x = Synth("pulsewave")} // pulse wave
 			);
+			delaySlider.value = 0;
 		)},
 		{x.free;}
 	);
 });
 
 statusButton.value = 0;
+resetButton.value = 0;
 )
