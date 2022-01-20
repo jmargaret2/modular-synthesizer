@@ -17,9 +17,21 @@ Nice to have modules in synth:
 - [] stutter effect
 */
 (
-var waveformMenu, awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton, arpeggiator, arpeggio, bpmViewer, currentBpmValue, bpmDictionaryValues, thirdFreq, fifthFreq;
+// Environment variables
+var awindow;
 
-var baseFrequency = 440; // A4
+// Module variables
+var volumeSlider, pitchKnob, applyButton, arpeggiator, delayButton;
+// var legatoButton
+
+// GUI variables
+var bpmViewer, statusButton, bpmDropDown;
+
+// Other variables
+var waveformMenu, bpmDictionaryValues, arpeggio, currentBpmValue;
+var baseFrequency = 440; // A4 -> synthesizer is based on the key of A Major, since that's standard tuning
+var thirdFreq = baseFrequency * (5/4);
+var fifthFreq = baseFrequency * (3/2);
 
 awindow = FlowView.new(windowTitle:"A Modular Synthesizer with Waveforms");
 
@@ -55,13 +67,6 @@ waveformMenu.item.postln;
 
 volumeSlider = EZSlider(awindow, label:"Volume", controlSpec:[0,100], action:{|mv| x.set("vol", mv.value)}, initVal:50);
 pitchKnob = EZKnob(awindow, label:"Pitch", controlSpec:\freq, action:{|mn| x.set("freq", mn.value)}, initVal:440);
-
-thirdFreq = (baseFrequency * 5) / 4;
-Post << thirdFreq << " the third interval" << Char.nl;
-fifthFreq = baseFrequency * 1.5;
-Post << fifthFreq << " the fifth interval" << Char.nl;
-
-Post << baseFrequency << " current note pitch" << Char.nl;
 
 bpmDropDown = PopUpMenu(awindow, Rect(20, 20, 120, 20));
 
@@ -116,21 +121,22 @@ bpmDropDown.items = [
 
 bpmViewer = StaticText.new(awindow, Rect(45, 70, 100, 20));
 
-/*legatoButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Sustain Off", Color.black, Color.gray],
-["Sustain On", Color.black, Color.yellow]]).action_({arg vbutton;
-if(vbutton.value==1,
-{(
-// make sure MIDI note is sustained until turned off
-)}
-);.
-});*/
-
 applyButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Update BPM", Color.black, Color.clear]]).action_({arg vbutton;
 	// apply changes to BPM values from BPM drop down
 	currentBpmValue = bpmDropDown.value;
 	currentBpmValue = bpmDictionaryValues.at(currentBpmValue);
 	bpmViewer.string = currentBpmValue;
 });
+
+// Does not apply to sinewave/waveform SynthDef, they are automatically sustained, and more effort would be needed to create the opposite module
+/*legatoButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Sustain Off", Color.black, Color.gray],
+	["Sustain On", Color.black, Color.yellow]]).action_({arg vbutton;
+	if(vbutton.value==1,
+		{(
+
+		)}
+	);
+});*/
 
 arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator Off", Color.black, Color.gray], ["Turn Arpeggiator On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1){(

@@ -1,65 +1,31 @@
-// s.boot;
-/*MIDIFunc.trace;
-// to turn tracing off:
-MIDIFunc.trace( false );*/
-/*
-[8454144, 0, 60, 127 ] -> example [source as INT, channel notes were sent on (indexed zero), note itself, velocity of note]
 (
-var onNote, offNote, quitNotes;
+// Environment variables
+var awindow;
 
-var notes = Array.newClear(128);
+// Module variables
+var volumeSlider, pitchKnob, bpmButton, arpeggiator, delayButton, legatoButton;
 
-onNote = MIDIFunc.noteOn({ |src, chan, num, veloc|
-	notes[num] = Synth("noteOn", [\freq, num.midicps,
-        \amp, veloc * 0.00315]);
-});
+// MIDI variables
+var notesArray = Array.new(128); // the notes array, to hold the MIDI notes, one note slot per possible MIDI note
+var mOut;
 
-offNote = MIDIFunc.noteOff({ |src, chan, num, veloc|
-    notes[num].release;
-});
-)*/
-/*
-Must have modules in synth:
-- [x] pitch bender
-- [x] volume control
-- [] bpm slider BPM here is meausred BPS
-- [] legato switch - sustain button
-- [] arpeggiator
-- [] delay effect
-*/
-/*
-Nice to have modules in synth:
-- [] aftertouch
-- [] generator
-- [] step sequencer
-- [] distortion effect
-- [] reverb effect
-- [] stutter effect
-*/
-/*MIDIClient.init(1, 1); // 1 input 1 output
-MIDIIn.connectAll;*/
-/*var allNotes = Array.newClear(128);
-var onNote;*/
+// GUI variables
+var bpmViewer, statusButton, bpmDropDown;
 
-(
-var awindow, volumeSlider, pitchKnob, statusButton, bpmDropDown, legatoButton, applyButton, arpeggiator, bpmViewer, bpmDictionaryValues, currentBpmValue;
-var notes;
+// Other variables
+var bpmDictionaryValues, arpeggio, currentBpmValue;
+var baseFrequency = 440; // A4 -> synthesizer is based on the key of A Major, since that's standard tuning
+var thirdFreq = baseFrequency * (5/4);
+var fifthFreq = baseFrequency * (3/2);
 
-var allNotes = Array.newClear(128);
-var onNote = MIDIFunc.noteOn({ |src, chan, num, veloc|
-	allNotes[num] = Synth("noteOn", [\freq, num.midicps,
-        \amp, veloc * 0.00315]);
-});
+MIDIClient.init(1,1);
+MIDIIn.connectAll;
+mOut = MIDIOut.newByName("LPK25", "LPK25").latency_(Server.default.latency);
 
-SynthDef("sinewave", {arg freq=440, vol=0.5;
-  Out.ar(0, SinOsc.ar(freq,0,vol))
-  }).send(s);
-
-SynthDef("midiInput", {})
-
-awindow = FlowView.new(windowTitle:"A Modular Synthesizer");
+awindow = FlowView.new(windowTitle:"A Modular Synthesizer with MIDI");
 volumeSlider = EZSlider(awindow, label:"Volume", controlSpec:[0,100], action:{|mv| x.set("vol", mv.value)}, initVal:50);
 pitchKnob = EZKnob(awindow, label:"Pitch", controlSpec:\freq, action:{|mn| x.set("freq", mn.value)}, initVal:440);
+
 bpmDropDown = PopUpMenu(awindow, Rect(20, 20, 120, 20));
 
 bpmDropDown.items = [
@@ -89,42 +55,58 @@ bpmDictionaryValues.put(17, 66);
 bpmDictionaryValues.put(18, 90);
 bpmDictionaryValues.put(19, 180);
 
-
-/*bpmSlider = EZPopUpMenu(awindow, label:"BPM", controlSpec:[0.4, 4.16666667], action:{|mbpm| x.set("bpm", bpm.value)}, initVal:0.4); // 24-250 range of BPM OR 0.4, 4,16666667 BPS/HZ*/
-/*legatoButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Sustain Off", Color.black, Color.gray],
-	["Sustain On", Color.black, Color.yellow]]).action_({arg vbutton;
-	if(vbutton.value==1,
-		{(
-			// make sure MIDI note is sustained until turned off
-		)}
-	);.
-});*/
-
-applyButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Update BPM", Color.black, Color.clear]]).action_({arg vbutton;
+bpmButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Update BPM", Color.black, Color.clear]]).action_({arg vbutton;
 	// apply changes to BPM values from BPM drop down
 	currentBpmValue = bpmDropDown.value;
 	currentBpmValue = bpmDictionaryValues.at(currentBpmValue);
 	bpmViewer.string = currentBpmValue;
 });
 
+arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator Off", Color.black, Color.gray], ["Turn Arpeggiator On", Color.black, Color.yellow]]).action_({arg vbutton;
+	if(vbutton.value == 1){(
+		// insert things
+	)}
+});
+
+
+
+arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator Off", Color.black, Color.gray], ["Turn Arpeggiator On", Color.black, Color.yellow]]).action_({arg vbutton;
+	if(vbutton.value==1){(
+		SynthDef("sinewave_third", {arg third_freq = 329.63, vol=50; Out.ar(0, SinOsc.ar(third_freq, 0, vol))}).add;
+		SynthDef("sinewave_fifth", {arg fifth_freq = 392, vol=50; Out.ar(0, SinOsc.ar(fifth_freq, 0, vol))}).add;
+		y = Synth("sinewave_third");
+		z = Synth("sinewave_fifth");
+		arpeggio = ["sinewave", "sinewave_third", "sinewave_fifth"];
+	)}
+	{
+		y.free;
+		z.free;
+	}
+});
+
+legatoButton = Button(awindow, Rect(20, 20, 100, 25))
+.states_([["Sustain Off", Color.black, Color.gray], ["Sustain On", Color.black, Color.yellow]])
+.action_({arg vbutton;
+	if(vbutton.value==1){
+		// MIDI is sustained
+	}
+	// MIDI is off
+});
+
 statusButton = Button(awindow, Rect(20,20, 50, 25))
-  .states_([["Off", Color.black, Color.grey],
-    ["On",Color.black,Color.yellow]])
-  .action_({ arg vbutton;
-     if(vbutton.value==1,
+.states_([["Off", Color.black, Color.grey],
+	["On",Color.black,Color.yellow]])
+.action_({ arg vbutton;
+	if(vbutton.value==1,
 		{(
-			x=Synth("sinewave");
+			// x=Synth("sinewave");
 			volumeSlider.value = 50;
 			pitchKnob.value = 440;
-			/*bpmSlider.value = 0.4;*/
+			MIDIdef.noteOn(\print, {arg val, num, chan, src; [src,chan, num, val].postln});
 		)},
-    {x.free});
-    });
+		{x.free});
+});
 
 statusButton.value = 0;
-// quitNotes = { onNote.free; offNote.free; }
-// when done
+MIDIClient.disposeClient;
 )
-//
-// MIDIdef.freeAll;
-// s.quit();
