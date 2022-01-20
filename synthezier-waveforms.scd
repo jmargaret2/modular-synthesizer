@@ -149,7 +149,7 @@ arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator
 	}
 });
 
-delaySlider = EZSlider(awindow, label:"Delay Time", labelHeight:50, labelWidth:100, controlSpec:[(-pi)/6, pi/6], action:{|md| x.set("phase", md.value)}, initVal:0); // maxes out at negative pi/6 (on a unit circle, 11pi/6) through to pi/6
+delaySlider = EZSlider(awindow, label:"Delay Time", labelHeight:50, labelWidth:100, controlSpec:[(-pi)/6, pi/6], action: {|md| x.set("phase", md.value)}, initVal:0); // maxes out at negative pi/6 (on a unit circle, 11pi/6) through to pi/6
 
 resetButton = Button(awindow, Rect(20,20,100,25)).states_([["Reset Values",Color.black,Color.clear]]).action_({arg vbutton;
 	volumeSlider.value = 50;
