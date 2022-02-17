@@ -1,86 +1,56 @@
+/*
+Must have modules in synth:
+- [] pitch bender
+- [] volume control
+- [] legato switch - sustain button
+- [x] distortion effect
+- [x] major chord generator -> needs work to be better than turning off/on again
+- [] delay effect
+*/
 (
 // Environment variables
-var awindow;
+var awindow, resetButton;
 
 // Module variables
-var volumeSlider, pitchKnob, bpmButton, arpeggiator, delayButton, legatoButton;
+var volumeSlider, pitchKnob, majorChord, delaySlider, legatoButton, distortionButton;
 
 // MIDI variables
-var notesArray = Array.new(128); // the notes array, to hold the MIDI notes, one note slot per possible MIDI note
-var mOut;
+var notesArray = Array.newClear(128); // the notes array, to hold the MIDI notes, one note slot per possible MIDI note
+var note, noteOnVel, on, off;
 
 // GUI variables
-var bpmViewer, statusButton, bpmDropDown;
+var statusButton;
 
 // Other variables
-var bpmDictionaryValues, arpeggio, currentBpmValue;
-var baseFrequency = 440; // A4 -> synthesizer is based on the key of A Major, since that's standard tuning
-var thirdFreq = baseFrequency * (5/4);
-var fifthFreq = baseFrequency * (3/2);
+var arpeggio, currentBpmValue, baseNote, baseFrequency, dist;
+var thirdInterval, fifthInterval;
+var thirdIntervalSynth, fifthIntervalSynth;
+var isNoteOn;
 
-MIDIClient.init(1,1);
-MIDIIn.connectAll;
-mOut = MIDIOut.newByName("LPK25", "LPK25").latency_(Server.default.latency);
+// A SynthDef with ADSR envelope
+SynthDef("piano", {arg freq = 440, amp = 0.1, gate = 1;
+	var snd, env;
+	env = Env.adsr(0.01, 0.1, 0.3, 2, amp).kr(2, gate);
+	snd = Saw.ar(freq: [freq, freq*1.5], mul: env);
+	Out.ar(0, snd)
+}).add;
 
 awindow = FlowView.new(windowTitle:"A Modular Synthesizer with MIDI");
-volumeSlider = EZSlider(awindow, label:"Volume", controlSpec:[0,100], action:{|mv| x.set("vol", mv.value)}, initVal:50);
-pitchKnob = EZKnob(awindow, label:"Pitch", controlSpec:\freq, action:{|mn| x.set("freq", mn.value)}, initVal:440);
+volumeSlider = EZSlider(awindow, label:"Volume", controlSpec:[0,127], action:{|volumeSliderValue|}, initVal:64);
+pitchKnob = EZKnob(awindow, label:"Pitch", controlSpec:[0, 127], action:{|pitchKnobValue| baseFrequency = \freq + pitchKnobValue.value}, initVal:0);
 
-bpmDropDown = PopUpMenu(awindow, Rect(20, 20, 120, 20));
-
-bpmDropDown.items = [
-	"Select a Genre", "Cha Cha", "Charleston", "Foxtrot", "Hip-Hop", "House", "Jazz/Funk", "Jive", "Metal", "Paso Doble", "Pop", "Quickstep", "Rock", "Rumba", "R&B", "Salsa", "Samba", "Tango", "Waltz", "Viennese Waltz"
-];
-bpmViewer = StaticText.new(awindow, Rect(45, 70, 100, 20));
-
-bpmDictionaryValues = Dictionary.new(20);
-bpmDictionaryValues.put(0, 0);
-bpmDictionaryValues.put(1, 128);
-bpmDictionaryValues.put(2, 290);
-bpmDictionaryValues.put(3, 120);
-bpmDictionaryValues.put(4, 115);
-bpmDictionaryValues.put(5, 135);
-bpmDictionaryValues.put(6, 125);
-bpmDictionaryValues.put(7, 184);
-bpmDictionaryValues.put(8, 160);
-bpmDictionaryValues.put(9, 124);
-bpmDictionaryValues.put(10, 130);
-bpmDictionaryValues.put(11, 208);
-bpmDictionaryValues.put(12, 140);
-bpmDictionaryValues.put(13, 108);
-bpmDictionaryValues.put(14, 80);
-bpmDictionaryValues.put(15, 300);
-bpmDictionaryValues.put(16, 105);
-bpmDictionaryValues.put(17, 66);
-bpmDictionaryValues.put(18, 90);
-bpmDictionaryValues.put(19, 180);
-
-bpmButton = Button(awindow, Rect(20, 20, 100, 25)).states_([["Update BPM", Color.black, Color.clear]]).action_({arg vbutton;
-	// apply changes to BPM values from BPM drop down
-	currentBpmValue = bpmDropDown.value;
-	currentBpmValue = bpmDictionaryValues.at(currentBpmValue);
-	bpmViewer.string = currentBpmValue;
-});
-
-arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator Off", Color.black, Color.gray], ["Turn Arpeggiator On", Color.black, Color.yellow]]).action_({arg vbutton;
-	if(vbutton.value == 1){(
-		// insert things
-	)}
-});
-
-
-
-arpeggiator = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Arpeggiator Off", Color.black, Color.gray], ["Turn Arpeggiator On", Color.black, Color.yellow]]).action_({arg vbutton;
+majorChord = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Major Chord Off", Color.black, Color.gray], ["Turn Major Chord On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1){(
-		SynthDef("sinewave_third", {arg third_freq = 329.63, vol=50; Out.ar(0, SinOsc.ar(third_freq, 0, vol))}).add;
-		SynthDef("sinewave_fifth", {arg fifth_freq = 392, vol=50; Out.ar(0, SinOsc.ar(fifth_freq, 0, vol))}).add;
-		y = Synth("sinewave_third");
-		z = Synth("sinewave_fifth");
-		arpeggio = ["sinewave", "sinewave_third", "sinewave_fifth"];
+		thirdInterval = baseFrequency * (2**(4/12));
+		fifthInterval = baseFrequency * (2**(7/12));
+		thirdIntervalSynth = Synth("piano", [\freq, thirdInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
+		fifthIntervalSynth = Synth("piano", [\freq, fifthInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
 	)}
 	{
-		y.free;
-		z.free;
+		thirdInterval = 0;
+		fifthInterval = 0;
+		thirdIntervalSynth.free;
+		fifthIntervalSynth.free;
 	}
 });
 
@@ -88,9 +58,47 @@ legatoButton = Button(awindow, Rect(20, 20, 100, 25))
 .states_([["Sustain Off", Color.black, Color.gray], ["Sustain On", Color.black, Color.yellow]])
 .action_({arg vbutton;
 	if(vbutton.value==1){
-		// MIDI is sustained
+		// MIDI is sustained through the status button
+		/*on = MIDIdef.noteOn(\myKeyDown, {arg vel, note;
+		baseNote = note;
+		noteOnVel = vel;
+		notesArray[note] = Synth("piano", [\freq, note, \amp, vel.linlin(0, 127, 0, 1)]);
+		["NOTE ON STATUS BUTTON", note].postln;
+		baseNote.postln;
+		});*/
 	}
-	// MIDI is off
+	{
+		// MIDI is off - turned off in this button
+	}
+});
+
+delaySlider = EZSlider(awindow, label:"Delay Time", labelHeight:50, labelWidth:100, controlSpec:[(-pi)/6, pi/6], action: {|md| x.set("phase", md.value)}, initVal:0); // maxes out at negative pi/6 (on a unit circle, 11pi/6) through to pi/6
+
+distortionButton = Button(awindow, Rect(20, 20, 130, 25)).states_([["Turn Distortion Off", Color.black, Color.grey], ["Turn Distortion On", Color.black, Color.yellow]]).action_({arg vbutton, freq, phase, vol;
+	if(vbutton.value==1,
+		{(
+			SynthDef("distortionSynthDef", {arg freq = baseFrequency, out = 0;
+				Out.ar(out, PinkNoise.ar(0.8), Saw.ar(baseFrequency, 0, 64))
+			}).add;
+			dist = Synth("distortionSynthDef");
+		)},
+		{
+			dist.free;
+		}
+	);
+});
+
+resetButton = Button(awindow, Rect(20,20,130,25)).states_([["Reset Everything",Color.black,Color.gray]]).action_({arg vbutton;
+	volumeSlider.value = 64;
+	pitchKnob.value = 0;
+	delaySlider.value = 0;
+	majorChord.value = 0;
+	MIDIClient.disposeClient;
+	thirdInterval = 0;
+	fifthInterval = 0;
+	statusButton.value = 0;
+	on.free;
+	off.free;
 });
 
 statusButton = Button(awindow, Rect(20,20, 50, 25))
@@ -99,14 +107,34 @@ statusButton = Button(awindow, Rect(20,20, 50, 25))
 .action_({ arg vbutton;
 	if(vbutton.value==1,
 		{(
-			// x=Synth("sinewave");
-			volumeSlider.value = 50;
-			pitchKnob.value = 440;
-			MIDIdef.noteOn(\print, {arg val, num, chan, src; [src,chan, num, val].postln});
+			MIDIClient.init;
+			MIDIIn.connect;
+			volumeSlider.value = 64;
+			pitchKnob.value = 0;
+
+			on = MIDIdef.noteOn(\keyDown, {arg vel, note, vol;
+				isNoteOn = True;
+				baseNote = note;
+				baseFrequency = note.midicps;
+				noteOnVel = vel;
+				notesArray[note] = Synth("piano", [\freq, baseFrequency, \amp, vel.linlin(0, 127, 0, 1)]);
+				["NOTE ON STATUS BUTTON", note].postln;
+			});
+
+			off = MIDIdef.noteOff(\keyUp, {arg vel, note;
+				isNoteOn = False;
+				notesArray[note].set(\gate, 0);
+				["NOTE OFF STATUS BUTTON", note].postln;
+			});
 		)},
-		{x.free});
+		{
+			on.free;
+			off.free;
+			thirdIntervalSynth.free;
+			fifthIntervalSynth.free;
+			MIDIClient.disposeClient;
+	});
 });
 
 statusButton.value = 0;
-MIDIClient.disposeClient;
 )
