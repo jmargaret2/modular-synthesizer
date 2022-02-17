@@ -2,7 +2,7 @@
 Must have modules in synth:
 - [] pitch bender
 - [] volume control
-- [] legato switch - sustain button
+- [x] legato switch - sustain button
 - [x] distortion effect
 - [x] major chord generator -> needs work to be better than turning off/on again
 - [] delay effect
@@ -37,7 +37,7 @@ SynthDef("piano", {arg freq = 440, amp = 0.1, gate = 1;
 
 awindow = FlowView.new(windowTitle:"A Modular Synthesizer with MIDI");
 volumeSlider = EZSlider(awindow, label:"Volume", controlSpec:[0,127], action:{|volumeSliderValue|}, initVal:64);
-pitchKnob = EZKnob(awindow, label:"Pitch", controlSpec:[0, 127], action:{|pitchKnobValue| baseFrequency = \freq + pitchKnobValue.value}, initVal:0);
+pitchKnob = EZKnob(awindow, label:"Pitch", controlSpec:[0, 127], action:{|pitchKnobValue| baseFrequency = pitchKnobValue.value.midicps}, initVal:0);
 
 majorChord = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Major Chord Off", Color.black, Color.gray], ["Turn Major Chord On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1){(
@@ -55,20 +55,21 @@ majorChord = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Major Chord 
 });
 
 legatoButton = Button(awindow, Rect(20, 20, 100, 25))
-.states_([["Sustain Off", Color.black, Color.gray], ["Sustain On", Color.black, Color.yellow]])
+.states_([["Sustain Is On", Color.black, Color.yellow], ["Sustain Is Off", Color.black, Color.gray]])
 .action_({arg vbutton;
 	if(vbutton.value==1){
-		// MIDI is sustained through the status button
-		/*on = MIDIdef.noteOn(\myKeyDown, {arg vel, note;
-		baseNote = note;
-		noteOnVel = vel;
-		notesArray[note] = Synth("piano", [\freq, note, \amp, vel.linlin(0, 127, 0, 1)]);
-		["NOTE ON STATUS BUTTON", note].postln;
-		baseNote.postln;
-		});*/
+		s.reboot;
+		// MIDI is sustained through this button, if this button is on (the default), the note/all notes will be sustained
+		off = MIDIdef.noteOff(\keyUp, {arg vel, note;
+			isNoteOn = False;
+			notesArray[note].set(\gate, 0);
+			["NOTE OFF LEGATO BUTTON", note].postln;
+		});
 	}
 	{
-		// MIDI is off - turned off in this button
+		// MIDI is off - also turned off in this button
+		on.free;
+		off.free;
 	}
 });
 
@@ -78,7 +79,7 @@ distortionButton = Button(awindow, Rect(20, 20, 130, 25)).states_([["Turn Distor
 	if(vbutton.value==1,
 		{(
 			SynthDef("distortionSynthDef", {arg freq = baseFrequency, out = 0;
-				Out.ar(out, PinkNoise.ar(0.8), Saw.ar(baseFrequency, 0, 64))
+				Out.ar(out, PinkNoise.ar(0.8), Saw.ar(baseFrequency, 0, 127))
 			}).add;
 			dist = Synth("distortionSynthDef");
 		)},
@@ -116,16 +117,11 @@ statusButton = Button(awindow, Rect(20,20, 50, 25))
 				isNoteOn = True;
 				baseNote = note;
 				baseFrequency = note.midicps;
-				noteOnVel = vel;
 				notesArray[note] = Synth("piano", [\freq, baseFrequency, \amp, vel.linlin(0, 127, 0, 1)]);
+				noteOnVel = vel;
 				["NOTE ON STATUS BUTTON", note].postln;
 			});
 
-			off = MIDIdef.noteOff(\keyUp, {arg vel, note;
-				isNoteOn = False;
-				notesArray[note].set(\gate, 0);
-				["NOTE OFF STATUS BUTTON", note].postln;
-			});
 		)},
 		{
 			on.free;
