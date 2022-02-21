@@ -12,7 +12,7 @@ Must have modules in synth:
 var awindow, resetButton;
 
 // Module variables
-var ampSlider, pitchKnob, majorChord, legatoButton, staccatoButton, distortionButton, attackKnob, decayKnob, sustainKnob, releaseKnob;
+var ampSlider, majorChord, legatoButton, staccatoButton, distortionButton, attackKnob, decayKnob, sustainKnob, releaseKnob;
 
 // ASDR variables
 var aLevel = 0.01;
@@ -113,11 +113,14 @@ releaseKnob = EZKnob(awindow, label: "Release", controlSpec: [0, 5], action:{|re
 
 resetButton = Button(awindow, Rect(20,20,130,25)).states_([["Reset Everything",Color.black,Color.gray]]).action_({arg vbutton;
 	ampSlider.value = 0.3;
-	pitchKnob.value = 440;
 	majorChord.value = 0;
 	legatoButton.value = 0;
 	staccatoButton.value = 0;
 	distortionButton.value = 0;
+	attackKnob.value = 0.01;
+	decayKnob.value = 0.1;
+	sustainKnob.value = 0.3;
+	releaseKnob.value = 2;
 	thirdInterval = 0;
 	fifthInterval = 0;
 	statusButton.value = 0;
@@ -126,10 +129,6 @@ resetButton = Button(awindow, Rect(20,20,130,25)).states_([["Reset Everything",C
 	sLevel = 0.3;
 	rTime = 2;
 	amp = 0.1;
-	attackKnob.value = 0.01;
-	decayKnob.value = 0.1;
-	sustainKnob.value = 0.3;
-	releaseKnob.value = 2;
 	on.free;
 	off.free;
 	MIDIClient.disposeClient;
