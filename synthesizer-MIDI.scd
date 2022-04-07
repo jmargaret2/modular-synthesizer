@@ -9,6 +9,10 @@
 // Environment variables
 var awindow, resetButton;
 
+// The variable ``s'' hold a special role in SuperCollider. It is in charge of actions regarding the server.
+// This will allow the server to start up, and let sound output be heard.
+// s.boot
+
 // Module variables
 var ampSlider, majorChord, legatoButton, staccatoButton, distortionButton, attackKnob, decayKnob, sustainKnob, releaseKnob;
 
