@@ -13,7 +13,7 @@ Go to <https://supercollider.github.io/downloads> and install the current versio
 
 Use this modular synthesizer with either the built-in sound waves, or a compatible MIDI device to alter sound.
 
-<img src="/Users/margaretjagger/Library/CloudStorage/OneDrive-TheCollegeofWooster/Spring 2022/Computer Science IS/Figures for Orals:Symposium/GUI.png" alt="The GUI of this virtual modular synthesizer">
+![](GUI.png)
 
 There are up to 11 possible sound modifications available for use, ranging from the volume and frequency control, to manual adjustments of the sound output of the MIDI device.
 
