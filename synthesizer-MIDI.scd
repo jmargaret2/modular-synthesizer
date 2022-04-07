@@ -1,11 +1,9 @@
-/*
-Must have modules in synth:
-- [x] volume control/amp slider
-- [x] legato switch - sustain button
-- [x] staccato button
-- [x] distortion effect
-- [x] major chord generator -> needs work to be better than turning off/on again
-- [] reverb dial
+/* This file contains the logic for the modules based around MIDI. In this file, the following modules exist:
+- a volume slider (an amp slider)
+- a harmonics generator (for this, a major chord)
+- a staccato butto
+- a legato button
+- manual adjustments to the ADSR envelope
 */
 (
 // Environment variables
@@ -42,9 +40,15 @@ SynthDef("piano", {arg freq = 440, amp = 0.1, gate = 1;
 	Out.ar(0, snd)
 }).add;
 
-awindow = FlowView.new(windowTitle:"A Modular Synthesizer with MIDI");
+awindow = FlowView.new(windowTitle: "A Modular Synthesizer with MIDI");
+
+// The amp value of the ADSR envelope can be adjusted through here, adjusting how loud the output MIDI sound is
+// perceived to be
 ampSlider = EZSlider(awindow, label:"Amp Volume", labelHeight: 100, labelWidth: 150, controlSpec: ControlSpec(0.1, 1, \lin), action:{|ampSliderValue| note.set(\amp, ampSliderValue.value)}, initVal:0.3);
 
+// A harmonics generator
+// This module will create two additional sounds over the played MIDI note, to sound similar to the way the first MIDI
+// note is played
 majorChord = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Major Chord Off", Color.black, Color.gray], ["Turn Major Chord On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1){(
 		thirdInterval = baseFrequency * (2**(4/12));
@@ -60,6 +64,9 @@ majorChord = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Major Chord 
 	}
 });
 
+// This module creates staccato for the played MIDI note
+// The Attack and Decay will be altered to produce a sound that is designed to show extreme staccato from the played MIDI
+// note
 staccatoButton = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Staccato Off", Color.black, Color.gray], ["Turn Staccato On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1){
 		// shorten attack time, shorten decay time to create sudden drop in sustained volume
@@ -72,6 +79,8 @@ staccatoButton = Button(awindow, Rect(20, 20, 150, 25)).states_([["Turn Staccato
 	}
 });
 
+// This module creates legato for the played MIDI note
+// The Attack and Release are altered to produce a sound designed to show extreme legato from the played MIDI note
 legatoButton = Button(awindow, Rect(20, 20, 100, 25))
 .states_([["Turn Legato Off", Color.black, Color.gray], ["Turn Legato On", Color.black, Color.yellow]])
 .action_({arg vbutton;
@@ -87,6 +96,8 @@ legatoButton = Button(awindow, Rect(20, 20, 100, 25))
 	}
 });
 
+// This module adds distortion to the played MIDI note
+// For this module, the tritone interval is used to add an unpleasant sound on top of a played MIDI note
 distortionButton = Button(awindow, Rect(20, 20, 130, 25)).states_([["Turn Distortion Off", Color.black, Color.grey], ["Turn Distortion On", Color.black, Color.yellow]]).action_({arg vbutton;
 	if(vbutton.value==1,
 		{(
@@ -103,6 +114,8 @@ distortionButton = Button(awindow, Rect(20, 20, 130, 25)).states_([["Turn Distor
 	);
 });
 
+// The following four knobs are manual adjustments to the MIDI ADSR envelope
+// This will allow the user to adjust aspects of the sound manually that may or may not exist within the preset modules
 attackKnob = EZKnob(awindow, label: "Attack", controlSpec: [0, 1], action:{|attackKnobValue| aLevel = attackKnobValue.value}, initVal: 0.01);
 
 decayKnob = EZKnob(awindow, label: "Decay", controlSpec: [0, 1], action:{|decayKnobValue| dLevel = decayKnobValue.value}, initVal: 0.1);
@@ -111,6 +124,7 @@ sustainKnob = EZKnob(awindow, label: "Sustain", controlSpec: [0, 1], action:{|su
 
 releaseKnob = EZKnob(awindow, label: "Release", controlSpec: [0, 5], action:{|releaseKnobValue| rTime = releaseKnobValue.value}, initVal: 2);
 
+// This module will reset the values of all modules and helper variables to 0, or to "off"
 resetButton = Button(awindow, Rect(20,20,130,25)).states_([["Reset Everything",Color.black,Color.gray]]).action_({arg vbutton;
 	ampSlider.value = 0.3;
 	majorChord.value = 0;
@@ -135,6 +149,9 @@ resetButton = Button(awindow, Rect(20,20,130,25)).states_([["Reset Everything",C
 
 });
 
+// This button will control the on/off status of this modular synthesizer
+// Within the button, the MIDI client is initialized and destroyed, with commands for the MIDI note on and note off messages
+// programmed
 statusButton = Button(awindow, Rect(20,20, 50, 25))
 .states_([["Off", Color.black, Color.grey],
 	["On",Color.black,Color.yellow]])
@@ -166,5 +183,6 @@ statusButton = Button(awindow, Rect(20,20, 50, 25))
 	});
 });
 
+// When the synthesizer is first run, the value of the status button is set to off
 statusButton.value = 0;
 )
