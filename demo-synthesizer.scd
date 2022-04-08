@@ -159,7 +159,7 @@ majorChordButton.action = {|vbutton|
 };
 
 // This slider will add delay to the pure sound waveforms
-delaySlider = EZSlider(w, Rect(-50, 235, 230, 25), label:"DELAY", labelHeight:50, labelWidth:100, controlSpec:[(-pi)/6, pi/6], action: {|md| x.set("phase", md.value)}, initVal:0); // maxes out at negative pi/6 (on a unit circle, 11pi/6) through to pi/6
+delaySlider = EZSlider(w, Rect(-50, 235, 230, 25), label:"DELAY", labelHeight:50, labelWidth:100, controlSpec:[(-pi)/6, pi/6], action: {|md| synth.set("phase", md.value)}, initVal:0); // maxes out at negative pi/6 (on a unit circle, 11pi/6) through to pi/6
 
 
 // Distortion will be added to either the pure sound waves or MIDI
