@@ -1,6 +1,6 @@
 # Virtual Modular Synthesizer
 
-> This is a virtual modular synthesizer aimed to accept both synthesized sound waves and MIDI as input option, and output desired sound modifications.
+> The primary goal of this project was to accept both synthesized sound waves and MIDI as input options, and output desired sound modifications.
 
 This is a virtual modular synthesizer built in the domain-specific language SuperCollider. It is meant to accept both sound waves which are natively played in SuperCollider's server, and MIDI. Sound modifications can then be made to the chosen input option.
 
