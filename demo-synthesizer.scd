@@ -67,9 +67,9 @@ waveformChoose = Button(w, Rect(20, 50, 130, 25))
 .action_({arg vbutton;
 	switch(waveformMenu.value,
 		0, {SynthDef("sinewave", {arg freq=440, phase=0, vol=50; Out.ar(0, SinOsc.ar(freq, phase, vol))}).add}, // sine wave
-		1, {SynthDef("squarewave", {arg freq=440, phase=0, vol=50; Out.ar(0, Pulse.ar(freq, 0, vol))}).add;}, // square wave
-		2, {SynthDef("sawtoothwave", {arg freq=440, vol=50; Out.ar(0, Saw.ar(freq, 0, vol))}).add;}, // sawtooth wave
-		3, {SynthDef("trianglewave", {arg freq=440, vol=50; Out.ar(0, LFTri.ar(freq, 0, vol))}).add;}, // triangle wave
+		1, {SynthDef("squarewave", {arg freq=440, phase=0, vol=50; Out.ar(0, Pulse.ar(freq, phase, vol))}).add;}, // square wave
+		2, {SynthDef("sawtoothwave", {arg freq=440, phase=0, vol=50; Out.ar(0, Saw.ar(freq, phase, vol))}).add;}, // sawtooth wave
+		3, {SynthDef("trianglewave", {arg freq=440, phase=0, vol=50; Out.ar(0, LFTri.ar(freq, phase, vol))}).add;}, // triangle wave
 	);
 });
 
@@ -122,10 +122,10 @@ resetButton.action = {|vbutton|
 };
 
 // This volume slider will control the output volume of the pure sound tones
-volumeSlider = EZSlider(w, Rect(0, 175, 230, 25), label:"VOLUME", controlSpec:[0,100], action:{|volumeSliderValue| x.set("vol", volumeSliderValue.value)}, initVal:50);
+volumeSlider = EZSlider(w, Rect(0, 175, 230, 25), label:"VOLUME", controlSpec:[0,100], action:{|volumeSliderValue| synth.set("vol", volumeSliderValue.value, "vol")}, initVal:50);
 
 // This pitch knob will adjust the perceived frequency of the pure sound wave
-pitchKnob = EZKnob(w, Rect(75, 275, 50, 100), label:"PITCH", controlSpec:\freq, action:{|pitchKnobValue| x.set("freq", pitchKnobValue.value, currentFreq)}, initVal:440);
+pitchKnob = EZKnob(w, Rect(75, 275, 50, 100), label:"PITCH", controlSpec:\freq, action:{|pitchKnobValue| synth.set("freq", pitchKnobValue.value, currentFreq)}, initVal:440);
 
 // This is a harmonics generator which will create a major chord on top of either the pure sound waves or MIDI
 majorChordButton = Button(w, Rect(275, 180, 100, 25));
