@@ -31,6 +31,16 @@ var fifthFreq = baseFrequency * (2**(7/12));
 // We create the background window, on which the remainder of this virtual modular synthesizer will be
 w = Window.new("Demo: A Virtual Modular Synthesizer", Rect(50, 50, 800, 500));
 
+// This SynthDef defines the sound that will be produced on the first Note On message played through a
+// MIDI-compatible device
+// Further sound modifications will result from changes made to the modules within this synthesizer
+SynthDef("piano", {arg freq = 440, amp = 0.1, gate = 1;
+	var snd, env;
+	env = Env.adsr(aLevel, dLevel, sLevel, rTime, amp).kr(2, gate);
+	snd = Saw.ar(freq: [freq, freq*1.5], mul: env);
+	Out.ar(0, snd)
+}).add;
+
 // This will add text describing that the left side of the synthesizer is dedicated to modules specifically built for the pure
 // sound waveforms
 oscillatorTitle = StaticText(w, Rect(30, 325, 100, 200));
@@ -130,11 +140,6 @@ majorChordButton.action = {|vbutton|
 				y = Synth(\thirdInterval);
 				z = Synth(\fifthInterval);
 				majChord = [synth, \thirdInterval, \fifthInterval];
-			)},
-			{(
-				majChord.free;
-				y.free;
-				z.free;
 			)}
 		);
 		if(midiButton.value==1,
@@ -143,13 +148,16 @@ majorChordButton.action = {|vbutton|
 				fifthInterval = midiBaseFrequency * (2**(7/12));
 				thirdIntervalSynth = Synth("piano", [\freq, thirdInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
 				fifthIntervalSynth = Synth("piano", [\freq, fifthInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
-			)},
-			{
-				thirdIntervalSynth.free;
-				fifthIntervalSynth.free;
-			}
+			)}
 		);
-	)};
+	)}
+	{
+		majChord.free;
+		y.free;
+		z.free;
+		thirdIntervalSynth.free;
+		fifthIntervalSynth.free;
+	}
 };
 
 // This slider will add delay to the pure sound waveforms
@@ -160,17 +168,14 @@ delaySlider = EZSlider(w, Rect(-50, 235, 230, 25), label:"DELAY", labelHeight:50
 distortionButton = Button(w, Rect(275, 275, 100, 20));
 distortionButton.states = ([["Start Distortion", Color.white, Color.black], ["Stop Distortion", Color.white, Color.black]]);
 distortionButton.action = {|vbutton|
-	if(vbutton.value==1,
+	if(vbutton.value==1)
 		{(
 			if(waveformButton.value==1,
 				{(
 					// add distortion by using the PinkNoise function, with a new sine wave, with the same frequency from pitchKnob
 					SynthDef("distortion", {InsideOut.ar(SinOsc.ar(baseFrequency) + PinkNoise.ar(0.9, 0), 30, 50)}).add;
 					dist = Synth("distortion");
-				)},
-				{
-					dist.free;
-				}
+				)}
 			);
 			if(midiButton.value==1,
 				{(
@@ -180,19 +185,15 @@ distortionButton.action = {|vbutton|
 					tritone = midiBaseFrequency * (2**(6/12));
 					// Create Distortion Effect, but not playing
 					SynthDef("distortionSynthDef", {arg out = 0;
-						Out.ar(out, SinOsc.ar(tritone, 0, 50), Saw.ar(tritone, 0, 50))
+						Out.ar(out, SinOsc.ar(tritone, 0, 25), Saw.ar(tritone, 0, 25))
 					}).add;
 					dist = Synth("distortionSynthDef");
-				)},
-				{
-					dist.free;
-				}
+				)}
 			);
-		)},
-		{
-			dist.free;
-		}
-	);
+		)}
+	{
+		dist.free;
+	}
 };
 
 /* The four following sliders are in charge of the exact values within an ADSR envelope. Attack, Decay, Sustain, and Release values can be manually adjusted here if the preset modules do not produce a desired sound output.
@@ -250,16 +251,6 @@ legatoButton.action = {|vbutton|
 		rTime = 2;
 	}
 };
-
-// This SynthDef defines the sound that will be produced on the first Note On message played through a
-// MIDI-compatible device
-// Further sound modifications will result from changes made to the modules within this synthesizer
-SynthDef("piano", {arg freq = 440, amp = 0.1, gate = 1;
-	var snd, env;
-	env = Env.adsr(aLevel, dLevel, sLevel, rTime, amp).kr(2, gate);
-	snd = Saw.ar(freq: [freq, freq*1.5], mul: env);
-	Out.ar(0, snd)
-}).add;
 
 /* MIDI Button - to start allowing MIDI as input, to hear MIDI being played, and to start sound modifications on MIDI
 There are 2 states to this button, on and off, to start and stop interacting with MIDI
