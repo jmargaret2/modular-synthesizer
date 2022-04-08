@@ -133,20 +133,20 @@ majorChordButton.states = [["Start Chord", Color.white, Color.black], ["Stop Cho
 majorChordButton.action = {|vbutton|
 	if(vbutton.value==1){(
 		if(waveformButton.value==1)
-			{(
-				SynthDef(\thirdInterval, {Out.ar(0, SinOsc.ar(thirdFreq, 0, 50))}).add;
-				SynthDef(\fifthInterval, {Out.ar(0, SinOsc.ar(fifthFreq, 0, 50))}).add;
-				y = Synth(\thirdInterval);
-				z = Synth(\fifthInterval);
-				majChord = [synth, \thirdInterval, \fifthInterval];
-			)};
+		{(
+			SynthDef(\thirdInterval, {Out.ar(0, SinOsc.ar(thirdFreq, 0, 50))}).add;
+			SynthDef(\fifthInterval, {Out.ar(0, SinOsc.ar(fifthFreq, 0, 50))}).add;
+			y = Synth(\thirdInterval);
+			z = Synth(\fifthInterval);
+			majChord = [synth, \thirdInterval, \fifthInterval];
+		)};
 		if(midiButton.value==1)
-			{(
-				thirdInterval = midiBaseFrequency * (2**(4/12));
-				fifthInterval = midiBaseFrequency * (2**(7/12));
-				thirdIntervalSynth = Synth("piano", [\freq, thirdInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
-				fifthIntervalSynth = Synth("piano", [\freq, fifthInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
-			)}
+		{(
+			thirdInterval = midiBaseFrequency * (2**(4/12));
+			fifthInterval = midiBaseFrequency * (2**(7/12));
+			thirdIntervalSynth = Synth("piano", [\freq, thirdInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
+			fifthIntervalSynth = Synth("piano", [\freq, fifthInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
+		)}
 	)}
 	{
 		y.free;
@@ -167,28 +167,27 @@ distortionButton = Button(w, Rect(275, 275, 100, 20));
 distortionButton.states = ([["Start Distortion", Color.white, Color.black], ["Stop Distortion", Color.white, Color.black]]);
 distortionButton.action = {|vbutton|
 	if(vbutton.value==1)
+	{(
+		if(waveformButton.value==1,
+			{(
+				// add distortion by using the PinkNoise function, with a new sine wave, with the same frequency from pitchKnob
+				dist = {InsideOut.ar(SinOsc.ar(baseFrequency) + PinkNoise.ar(0.9, 0), 30, 50)}.play;
+			)}
+		);
+
+		if(midiButton.value==1)
 		{(
-			if(waveformButton.value==1,
-				{(
-					// add distortion by using the PinkNoise function, with a new sine wave, with the same frequency from pitchKnob
-					SynthDef("distortion", {InsideOut.ar(SinOsc.ar(baseFrequency) + PinkNoise.ar(0.9, 0), 30, 50)}).add;
-					dist = Synth("distortion");
-				)}
-			);
-			if(midiButton.value==1,
-				{(
-					// Calculate the tritone interval
-					// For the purposes of MIDI, this type of interval will produce a dissonant sound,
-					// similar to how distortion will make an unpleasant sound
-					tritone = midiBaseFrequency * (2**(6/12));
-					// Create Distortion Effect, but not playing
-					SynthDef("distortionSynthDef", {arg out = 0;
-						Out.ar(out, SinOsc.ar(tritone, 0, 25), Saw.ar(tritone, 0, 25))
-					}).add;
-					dist = Synth("distortionSynthDef");
-				)}
-			);
-		)}
+			// Calculate the tritone interval
+			// For the purposes of MIDI, this type of interval will produce a dissonant sound,
+			// similar to how distortion will make an unpleasant sound
+			tritone = midiBaseFrequency * (2**(6/12));
+			// Create Distortion Effect, but not playing
+			SynthDef("distortionSynthDef", {arg out = 0;
+				Out.ar(out, SinOsc.ar(tritone, 0, 25), Saw.ar(tritone, 0, 25))
+			}).add;
+			dist = Synth("distortionSynthDef");
+		)};
+	)}
 	{
 		dist.free;
 	}
@@ -219,14 +218,14 @@ staccatoButton = Button(w, Rect(550, 200, 100, 20));
 staccatoButton.states = [["Start Staccato", Color.white, Color.black], ["Stop Staccato", Color.white, Color.black]];
 staccatoButton.action = {|vbutton|
 	if(vbutton.value==1)
-		{(
-			// shorten attack time, shorten decay time to create sudden drop in sustained volume
-			aLevel = 0;
-			dLevel = 0;
-		)}
-		{
-			aLevel = 0.01;
-			dLevel = 0.1;
+	{(
+		// shorten attack time, shorten decay time to create sudden drop in sustained volume
+		aLevel = 0;
+		dLevel = 0;
+	)}
+	{
+		aLevel = 0.01;
+		dLevel = 0.1;
 	}
 };
 
