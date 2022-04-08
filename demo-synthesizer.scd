@@ -66,10 +66,10 @@ waveformChoose = Button(w, Rect(20, 50, 130, 25))
 .states_([["Choose Waveform", Color.black, Color.gray]])
 .action_({arg vbutton;
 	switch(waveformMenu.value,
-		0, {SynthDef("sinewave", {arg freq=440, phase=0, vol=50; Out.ar(0, SinOsc.ar(freq, phase, vol))}).add},
-		1, {SynthDef("squarewave", {arg freq=440, phase=0, vol=50; Out.ar(0, Pulse.ar(freq, 0, vol))}).add;},
-		2, {SynthDef("sawtoothwave", {arg freq=440, vol=50; Out.ar(0, Saw.ar(freq, 0, vol))}).add;},
-		3, {SynthDef("trianglewave", {arg freq=440, vol=50; Out.ar(0, LFTri.ar(freq, 0, vol))}).add;},
+		0, {SynthDef("sinewave", {arg freq=440, phase=0, vol=50; Out.ar(0, SinOsc.ar(freq, phase, vol))}).add}, // sine wave
+		1, {SynthDef("squarewave", {arg freq=440, phase=0, vol=50; Out.ar(0, Pulse.ar(freq, 0, vol))}).add;}, // square wave
+		2, {SynthDef("sawtoothwave", {arg freq=440, vol=50; Out.ar(0, Saw.ar(freq, 0, vol))}).add;}, // sawtooth wave
+		3, {SynthDef("trianglewave", {arg freq=440, vol=50; Out.ar(0, LFTri.ar(freq, 0, vol))}).add;}, // triangle wave
 	);
 });
 
@@ -85,18 +85,17 @@ There are 2 states to this button, on and off, to start and stop the playing of 
 waveformButton = Button(w, Rect(20, 100, 150, 50));
 waveformButton.states = [["START WAVEFORMS", Color.white, Color.black], ["STOP WAVEFORMS",Color.white,Color.black]];
 waveformButton.action = {|vbutton|
-	if(vbutton.value==1,{
+	if(vbutton.value==1){(
 		switch(waveformMenu.value,
 			0, {synth = Synth("sinewave");},
 			1, {synth = Synth("squarewave");},
 			2, {synth = Synth("sawtoothwave");},
 			3, {synth = Synth("trianglewave");},
 		);
-	},
+	)}
 	{
-		synth.free;
+		synth.free
 	}
-	);
 };
 
 /* Reset Button - resets all values in synthesizer
@@ -133,28 +132,27 @@ majorChordButton = Button(w, Rect(275, 180, 100, 25));
 majorChordButton.states = [["Start Chord", Color.white, Color.black], ["Stop Chord", Color.white, Color.black]];
 majorChordButton.action = {|vbutton|
 	if(vbutton.value==1){(
-		if(waveformButton.value==1,
+		if(waveformButton.value==1)
 			{(
 				SynthDef(\thirdInterval, {Out.ar(0, SinOsc.ar(thirdFreq, 0, 50))}).add;
 				SynthDef(\fifthInterval, {Out.ar(0, SinOsc.ar(fifthFreq, 0, 50))}).add;
 				y = Synth(\thirdInterval);
 				z = Synth(\fifthInterval);
 				majChord = [synth, \thirdInterval, \fifthInterval];
-			)}
-		);
-		if(midiButton.value==1,
+			)};
+		if(midiButton.value==1)
 			{(
 				thirdInterval = midiBaseFrequency * (2**(4/12));
 				fifthInterval = midiBaseFrequency * (2**(7/12));
 				thirdIntervalSynth = Synth("piano", [\freq, thirdInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
 				fifthIntervalSynth = Synth("piano", [\freq, fifthInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
 			)}
-		);
 	)}
 	{
-		majChord.free;
 		y.free;
 		z.free;
+		majChord.free;
+		waveformButton.value=0;
 		thirdIntervalSynth.free;
 		fifthIntervalSynth.free;
 	}
@@ -220,16 +218,16 @@ This button has 2 states, on and off, to control how short a note may sound
 staccatoButton = Button(w, Rect(550, 200, 100, 20));
 staccatoButton.states = [["Start Staccato", Color.white, Color.black], ["Stop Staccato", Color.white, Color.black]];
 staccatoButton.action = {|vbutton|
-	if(vbutton.value==1,
+	if(vbutton.value==1)
 		{(
 			// shorten attack time, shorten decay time to create sudden drop in sustained volume
 			aLevel = 0;
 			dLevel = 0;
-		)},
+		)}
 		{
 			aLevel = 0.01;
 			dLevel = 0.1;
-	})
+	}
 };
 
 /* legatoButton - adds legato to the MIDI note
@@ -245,7 +243,7 @@ legatoButton.action = {|vbutton|
 		sLevel = 3.5;
 	}
 	{
-		// reset attack and release levels to default
+		// reset attack, sustain, and release levels to default
 		aLevel = 0.01;
 		sLevel = 0.3;
 		rTime = 2;
