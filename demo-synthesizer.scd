@@ -16,15 +16,17 @@ var oscillatorTitle, envelopeTitle, waveformLabel, bothModules;
 var w, waveformMenu, waveformButton, waveformChoose, synth, statusButton, resetButton, pitchKnob, volumeSlider, majorChordButton; var delaySlider, distortionButton, attackSlider, decaySlider, releaseSlider, sustainSlider, staccatoButton, legatoButton;
 var midiButton, ampSlider, dist;
 
-// These variables will contain the necessary values for MIDI to function properly within this module synthesizer
-var aLevel, dLevel, sLevel, rTime;
-var on, off, notesArray, noteOnVel;
+// These variables will contain the necessary values for MIDI to function properly within this modular synthesizer
+var aLevel = 0.01, dLevel = 0.1, sLevel = 0.3, rTime = 2, amp = 0.1;
+var on, off, noteOnVel, note, fifthIntervalSynth, fifthInterval, thirdIntervalSynth, thirdInterval, midiBaseFrequency;
+var notesArray = Array.newClear(128); // the notes array, to hold the MIDI notes, one note slot per possible MIDI note
 
 // These are other helper variables, that allow certain modules within this synthesizer to function
 var y, z, majChord, tritone;
-var currentFreq = 440;
-var thirdFreq = currentFreq * (2**(4/12));
-var fifthFreq = currentFreq * (2**(7/12));
+var currentFreq;
+var baseFrequency = 440;
+var thirdFreq = baseFrequency * (2**(4/12));
+var fifthFreq = baseFrequency * (2**(7/12));
 
 // We create the background window, on which the remainder of this virtual modular synthesizer will be
 w = Window.new("Demo: A Virtual Modular Synthesizer", Rect(50, 50, 800, 500));
@@ -51,13 +53,13 @@ waveformMenu.items = [
 There are four possibilities: sine wave, square wave, sawtooth wave, triangle wave
 */
 waveformChoose = Button(w, Rect(20, 50, 130, 25))
-.states_([["Update Waveform", Color.black, Color.gray]])
-.action_({arg vbutton, freq=440, phase=0, vol=50;
+.states_([["Choose Waveform", Color.black, Color.gray]])
+.action_({arg vbutton;
 	switch(waveformMenu.value,
-		0, {SynthDef(\wave, {Out.ar(0, SinOsc.ar(freq, phase, vol))}).add}, // sine wave
-		1, {SynthDef(\wave, {Out.kr(0, Pulse.ar(freq, phase, vol))}).add;}, // square wave
-		2, {SynthDef(\wave, {Out.kr(0, Saw.ar(freq, phase, vol))}).add;}, // sawtooth wave
-		3, {SynthDef(\wave, {Out.kr(0, LFTri.ar(freq, phase, vol))}).add;}, // triangle wave
+		0, {SynthDef("sinewave", {arg freq=440, phase=0, vol=50; Out.ar(0, SinOsc.ar(freq, phase, vol))}).add},
+		1, {SynthDef("squarewave", {arg freq=440, phase=0, vol=50; Out.ar(0, Pulse.ar(freq, 0, vol))}).add;},
+		2, {SynthDef("sawtoothwave", {arg freq=440, vol=50; Out.ar(0, Saw.ar(freq, 0, vol))}).add;},
+		3, {SynthDef("trianglewave", {arg freq=440, vol=50; Out.ar(0, LFTri.ar(freq, 0, vol))}).add;},
 	);
 });
 
@@ -74,7 +76,12 @@ waveformButton = Button(w, Rect(20, 100, 150, 50));
 waveformButton.states = [["START WAVEFORMS", Color.white, Color.black], ["STOP WAVEFORMS",Color.white,Color.black]];
 waveformButton.action = {|vbutton|
 	if(vbutton.value==1,{
-		synth = Synth(\wave);
+		switch(waveformMenu.value,
+			0, {synth = Synth("sinewave");},
+			1, {synth = Synth("squarewave");},
+			2, {synth = Synth("sawtoothwave");},
+			3, {synth = Synth("trianglewave");},
+		);
 	},
 	{
 		synth.free;
@@ -94,6 +101,7 @@ resetButton.action = {|vbutton|
 	volumeSlider.value=50;
 	majorChordButton.value=0;
 	midiButton.value=0;
+	MIDIClient.disposeClient;
 	delaySlider.value=0;
 	distortionButton.value=0;
 	attackSlider.value=0.01;
@@ -121,18 +129,25 @@ majorChordButton.action = {|vbutton|
 				SynthDef(\fifthInterval, {Out.ar(0, SinOsc.ar(fifthFreq, 0, 50))}).add;
 				y = Synth(\thirdInterval);
 				z = Synth(\fifthInterval);
-				majChord = [\wave, "sinewave_third", "sinewave_fifth"];
+				majChord = [synth, \thirdInterval, \fifthInterval];
 			)},
 			{(
+				majChord.free;
 				y.free;
 				z.free;
-				majChord.free;
 			)}
 		);
 		if(midiButton.value==1,
 			{(
-				// stuff
-			)}
+				thirdInterval = midiBaseFrequency * (2**(4/12));
+				fifthInterval = midiBaseFrequency * (2**(7/12));
+				thirdIntervalSynth = Synth("piano", [\freq, thirdInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
+				fifthIntervalSynth = Synth("piano", [\freq, fifthInterval, \amp, noteOnVel.linlin(0, 127, 0, 1)]);
+			)},
+			{
+				thirdIntervalSynth.free;
+				fifthIntervalSynth.free;
+			}
 		);
 	)};
 };
@@ -145,26 +160,34 @@ delaySlider = EZSlider(w, Rect(-50, 235, 230, 25), label:"DELAY", labelHeight:50
 distortionButton = Button(w, Rect(275, 275, 100, 20));
 distortionButton.states = ([["Start Distortion", Color.white, Color.black], ["Stop Distortion", Color.white, Color.black]]);
 distortionButton.action = {|vbutton|
-	if(waveformButton.value==1,
+	if(vbutton.value==1,
 		{(
-			// add distortion by using the PinkNoise function, with a new sine wave, with the same frequency from pitchKnob
-			dist = {InsideOut.ar(SinOsc.ar(currentFreq) + PinkNoise.ar(0.9, 0), 30, 50)};
-		)},
-		{
-			dist.free;
-		}
-	);
-	if(midiButton.value==1,
-		{(
-			// Calculate the tritone interval
-			// For the purposes of MIDI, this type of interval will produce a dissonant sound,
-			// similar to how distortion will make an unpleasant sound
-			tritone = currentFreq * (2**(6/12));
-			// Create Distortion Effect, but not playing
-			SynthDef("distortionSynthDef", {arg out = 0;
-				Out.ar(out, SinOsc.ar(tritone, 0, 50), Saw.ar(tritone, 0, 50))
-			}).add;
-			dist = Synth("distortionSynthDef");
+			if(waveformButton.value==1,
+				{(
+					// add distortion by using the PinkNoise function, with a new sine wave, with the same frequency from pitchKnob
+					SynthDef("distortion", {InsideOut.ar(SinOsc.ar(baseFrequency) + PinkNoise.ar(0.9, 0), 30, 50)}).add;
+					dist = Synth("distortion");
+				)},
+				{
+					dist.free;
+				}
+			);
+			if(midiButton.value==1,
+				{(
+					// Calculate the tritone interval
+					// For the purposes of MIDI, this type of interval will produce a dissonant sound,
+					// similar to how distortion will make an unpleasant sound
+					tritone = midiBaseFrequency * (2**(6/12));
+					// Create Distortion Effect, but not playing
+					SynthDef("distortionSynthDef", {arg out = 0;
+						Out.ar(out, SinOsc.ar(tritone, 0, 50), Saw.ar(tritone, 0, 50))
+					}).add;
+					dist = Synth("distortionSynthDef");
+				)},
+				{
+					dist.free;
+				}
+			);
 		)},
 		{
 			dist.free;
@@ -188,7 +211,7 @@ releaseSlider = EZSlider(w, Rect(460, 120, 260, 25), "RELEASE", [0, 5],
 	{|releaseSlider| synth.set(rTime, releaseSlider.value); }, 2);
 
 // This slider will adjust the amp level of the MIDI modules, essentially adjusting the perceived loudness of sounds
-ampSlider = EZSlider(w, Rect(400, 150, 320, 25), label:"ADSR amp value", labelHeight: 100, labelWidth: 150, controlSpec: ControlSpec(0.1, 1, \lin), initVal:0.3);
+ampSlider = EZSlider(w, Rect(400, 150, 320, 25), label:"ADSR amp value", labelHeight: 100, labelWidth: 150, controlSpec: ControlSpec(0.1, 1, \lin), action:{|ampSliderValue| note.set(\amp, ampSliderValue.value)}, initVal:0.3);
 
 /* staccatoButton - adds staccato to the MIDI note
 This button has 2 states, on and off, to control how short a note may sound
@@ -214,8 +237,29 @@ This button has 2 states, on and off, to control how connected a note may sound 
 legatoButton = Button(w, Rect(550, 250, 100, 20));
 legatoButton.states = [["Start Legato", Color.white, Color.black], ["Stop Legato", Color.white, Color.black]];
 legatoButton.action = {|vbutton|
-	// stuff
+	if(vbutton.value==1){
+		// increase attack, sustain, and release levels
+		aLevel = 1;
+		rTime = 5;
+		sLevel = 3.5;
+	}
+	{
+		// reset attack and release levels to default
+		aLevel = 0.01;
+		sLevel = 0.3;
+		rTime = 2;
+	}
 };
+
+// This SynthDef defines the sound that will be produced on the first Note On message played through a
+// MIDI-compatible device
+// Further sound modifications will result from changes made to the modules within this synthesizer
+SynthDef("piano", {arg freq = 440, amp = 0.1, gate = 1;
+	var snd, env;
+	env = Env.adsr(aLevel, dLevel, sLevel, rTime, amp).kr(2, gate);
+	snd = Saw.ar(freq: [freq, freq*1.5], mul: env);
+	Out.ar(0, snd)
+}).add;
 
 /* MIDI Button - to start allowing MIDI as input, to hear MIDI being played, and to start sound modifications on MIDI
 There are 2 states to this button, on and off, to start and stop interacting with MIDI
@@ -228,11 +272,11 @@ midiButton.action = {|vbutton|
 			MIDIClient.init;
 			MIDIIn.connect;
 
-			on = MIDIdef.noteOn(\keyDown, {arg vel, note, vol;
-				currentFreq = note.midicps;
+			on = MIDIdef.noteOn(\keyDown, {arg vel, note;
+				midiBaseFrequency = note.midicps;
 				note.postln;
 				// notesArray[note] = Synth("piano", [\freq, baseFrequency, \amp, vel.linlin(0, 127, 0, 1)]);
-				notesArray[note] = Synth("piano", [\freq, currentFreq, \amp, vel.linlin(aLevel, dLevel, sLevel, rTime)]);
+				notesArray[note] = Synth("piano", [\freq, midiBaseFrequency, \amp, vel.linlin(aLevel, dLevel, sLevel, rTime)]);
 				noteOnVel = vel;
 				["NOTE ON STATUS BUTTON", note].postln;
 			});
